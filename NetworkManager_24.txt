@@ -1,0 +1,145 @@
+using LiteNetLib;
+using LiteNetLib.Utils;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+//[Serializable] 
+public class NetworkManager : MonoBehaviour//INetSerializable
+{
+    private static Dictionary<int, UserInfo> _users = new Dictionary<int, UserInfo>();
+
+    enum Codes { Init, MoveInSpace, Remove, ElderPlayer };
+
+    private enum CodeMethod : byte
+    {
+        //КОДЫ КОМАНДЫ (PATTERN: ID+"::"+__code__+"::"+args*) - т.е. 
+        //  0 - ИНИЦИАЛИЗАЦИЯ
+        //  1 - ПЕРЕМЕЩЕНИЕ
+        //  255 - УДАЛЕНИЕ
+        //  2 - информация о старом игроке
+
+        Init = 0,           //сообщение об инициализации нового игрока
+        MoveInSpace = 1,    // сообщение о перемещение объекта
+        Remove = 255,       // сообщение об удалении
+        ElderPlayer = 2     // информация о старых игроках
+    }
+
+    private static string myCodeMakerSend(byte Command, NetPeer Sender)
+    {
+
+        string _codeMessage = "";
+        var SenderId = Sender.Id;
+        switch (Command)
+        {
+            case 0:
+                _codeMessage = $"{SenderId}::{CodeMethod.Init}:{0}:{0}:{0}";
+                break;
+            case 1:
+                _codeMessage = $"{SenderId}::{CodeMethod.MoveInSpace}:{_users[Sender.Id].x}:{_users[Sender.Id].y}:{_users[Sender.Id].z}";
+                break;
+            case 255:
+                _codeMessage = $"{SenderId}::{CodeMethod.Remove}";
+                break;
+            case 2:
+                _codeMessage = $"{SenderId}::{CodeMethod.ElderPlayer}:{_users[Sender.Id].x}:{_users[Sender.Id].y}:{_users[Sender.Id].z}";
+                break;
+        }
+        return _codeMessage;
+    }
+    //[SerializeField]
+    //private ClientPlayer player = new ClientPlayer();
+    [SerializeField]
+    private Transform _userTransform;
+
+    private static NetDataWriter ClientWriter;
+
+    //private static NetDataReader ClientReader;
+    //private GameObject user;
+
+    EventBasedNetListener listener;
+    NetManager client;
+
+
+
+    // Start is called before the first frame update
+    void Start()
+    {
+
+        Debug.Log("Start");
+        ClientWriter = new NetDataWriter();
+        listener = new EventBasedNetListener();
+        client = new NetManager(listener);
+        client.Start();
+        client.Connect("192.168.168.109" /* host ip or name */, 9060 /* port */, "SomeConnectionKey" /* text key or NetDataWriter */); // connect
+        // получает сообщение  от сервера о своем имени
+
+
+        listener.NetworkReceiveEvent += HandleRecieve;
+
+        //while (!Console.KeyAvailable)
+        //{
+        //    client.PollEvents();
+        //    Thread.Sleep(15);
+        //}
+
+       // client.Stop();
+    }
+
+    private void HandleRecieve(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+    {
+        Debug.LogFormat("We got: {0}", reader.GetString(100 /* max length of string */));
+        //Debug.Log($"We got: {reader.GetString(100 /* max length of string */)}");
+        
+        reader.Recycle();
+    }
+
+
+    // Update is called once per frame
+    void Update()
+    {
+        // отправлять  серверу: 
+        /// координаты и ориентацию тела
+        /// запросы
+        /// 
+        Debug.Log("Update");
+        client.PollEvents();
+        //получаем writer  с нужными данными положения
+        GetSerializedPosition();
+
+        client.FirstPeer.Send(ClientWriter, DeliveryMethod.Unreliable);//отправка
+
+        ClientWriter.Reset();
+
+    }
+
+    private void GetSerializedPosition()
+    {
+        ClientWriter.Put(1);
+        ClientWriter.Put(_userTransform.position.x);
+        ClientWriter.Put(_userTransform.position.y);
+        ClientWriter.Put(_userTransform.position.z);
+    }
+
+    void OnDestroy()
+    {
+        Debug.Log("OnDestroy");
+        client.Stop();
+    }
+
+    public void Serialize(NetDataWriter writer)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Deserialize(NetDataReader reader)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class UserInfo
+{
+    public float x, y, z;
+}
