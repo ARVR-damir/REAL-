@@ -1,0 +1,221 @@
+using LiteNetLib;
+using LiteNetLib.Utils;
+using System.Net;
+using System.Net.Sockets;
+//[Serializable]
+public static class Server
+{
+    private static Dictionary<int, UserInfo> _users = new Dictionary<int, UserInfo>();
+
+    enum Codes { Init, MoveInSpace, Remove, ElderPlayer };
+
+    private enum CodeMethod : byte
+    {
+        //КОДЫ КОМАНДЫ (PATTERN: ID+"::"+__code__+"::"+args*) - т.е. 
+        //  0 - ИНИЦИАЛИЗАЦИЯ
+        //  1 - ПЕРЕМЕЩЕНИЕ
+        //  255 - УДАЛЕНИЕ
+        //  2 - информация о старом игроке
+
+        Init = 0,           //сообщение об инициализации нового игрока
+        MoveInSpace = 1,    // сообщение о перемещение объекта
+        Remove = 255,       // сообщение об удалении
+        ElderPlayer = 2     // информация о старых игроках
+    }
+
+    private static string myCodeMakerSend(byte Command, NetPeer Sender)
+    {
+
+        string _codeMessage = "";
+        var SenderId = Sender.Id;
+        switch (Command)
+        {
+            case 0:
+                _codeMessage = $"{SenderId}::{CodeMethod.Init}:{0}:{0}:{0}";
+                break;
+            case 1:
+                _codeMessage = $"{SenderId}::{CodeMethod.MoveInSpace}:{_users[Sender.Id].x}:{_users[Sender.Id].y}:{_users[Sender.Id].z}";
+                break;
+            case 255:
+                _codeMessage = $"{SenderId}::{CodeMethod.Remove}";
+                break;
+            case 2:
+                _codeMessage = $"{SenderId}::{CodeMethod.ElderPlayer}:{_users[Sender.Id].x}:{_users[Sender.Id].y}:{_users[Sender.Id].z}";
+                break;
+        }
+        return _codeMessage;
+    }
+
+    static NetManager server;
+    private static NetDataWriter server_writer = new NetDataWriter(); // cоставитель команд от сервера
+
+
+
+    private static string GetLocalIPAddress() // получаем Ip server
+    {
+        var host = Dns.GetHostEntry(System.Net.Dns.GetHostName());
+        foreach (var ip in host.AddressList)
+        {
+            if (ip.AddressFamily == AddressFamily.InterNetwork)
+            {
+                Console.WriteLine(ip.GetType());
+                return ip.ToString();//int.Parse(ip.ToString());
+            }
+        }
+        throw new Exception("No network adapters with an IPv4 address in the system!");
+    }
+
+
+    public static void Main(string[] args)
+    {
+        Console.WriteLine("Starting server");
+        EventBasedNetListener listener = new EventBasedNetListener();
+        server = new NetManager(listener);
+        string _serverIp = GetLocalIPAddress();
+        Console.WriteLine("Server's Ip: {0}", _serverIp);
+
+        server.Start(9060 /* port */);
+
+        listener.ConnectionRequestEvent += request =>
+        {
+            if (server.ConnectedPeersCount < 6 /* max connections */)
+                request.AcceptIfKey("SomeConnectionKey");
+            else
+                request.Reject();
+        };
+
+        listener.PeerConnectedEvent += peer =>
+        {
+            Console.WriteLine("We got connection: {0} ; type = {1}", peer.EndPoint, peer.EndPoint.GetType()); // Show peer ip
+            //NetDataWriter writer = new NetDataWriter();                 // Create writer class
+            //List_clientsId.Add(peer.EndPoint); // добавляем 
+            _users.Add(peer.Id, new UserInfo());
+            //
+            //fwriter( номера и координаты ддруги 
+            // для 
+            /*foreach (var pair in _users)
+            {
+                pair.Key;
+                pair.Value.x.y
+            //
+            foreach (var otherpair in server.ConnectedPeerList)
+            {
+
+            }*/
+
+
+            server_writer.Put("Hello client!");
+
+            //writer.Put();// Put some string
+
+            peer.Send(server_writer, DeliveryMethod.ReliableOrdered);// Send with reliability
+            server_writer.Reset();
+        };
+        listener.PeerDisconnectedEvent += (peer, _) =>
+        {
+            _users.Remove(peer.Id);
+            Console.WriteLine($"{peer.EndPoint} disconect");
+        };
+
+        listener.NetworkReceiveEvent += HandleReceive;
+
+        while (!Console.KeyAvailable)
+        {
+            server.PollEvents();
+            Thread.Sleep(15);
+        }
+        server.Stop();
+
+    }
+    /*private static void IdPositionWriter(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+    {
+        
+        var IdInfo = peer.EndPoint; // получаем Id
+        
+
+    }*/
+
+
+    private static void HandleReceive(NetPeer peer, NetPacketReader reader, DeliveryMethod deliveryMethod)
+    {
+
+        var message_index = reader.GetInt(); //
+        if (message_index == 1)
+        {
+            /*var X = reader.GetFloat();// x
+            var Y = reader.GetFloat();// y
+            var Z = reader.GetFloat();// z*/
+            UserInfo oldUser = _users[peer.Id];
+            var user = _users[peer.Id];
+            /*UserInfo newUser = new UserInfo();*/
+            float X = reader.GetFloat();
+            float Y = reader.GetFloat();
+            float Z = reader.GetFloat();
+
+            var Pos = (X, Y, Z);
+            var OldPos = (user.x, user.y, user.z);
+            /*if (pos != (user.x,user.y,user.z))*/
+            /*Console.WriteLine($"{new float[3] { user.x, user.y, user.z}}; !!! {new float[3] { user.x, user.y, user.z }.GetType()}");
+            Console.WriteLine($"{_newCords}; !!! {_newCords.GetType()}");*/
+
+            /*Console.WriteLine($"x: {user.x}  ? {newUser.x}");
+            Console.WriteLine($"y: {user.y}  ? {newUser.y}");
+            Console.WriteLine($"z: {user.z}  ? {newUser.z}");*/
+            /*Console.WriteLine(Equals(new float[3] { user.x, user.y, user.z }, _newCords));
+            Console.WriteLine(user.GetType());
+            Console.WriteLine(_newCords.GetType());*/
+            bool v = Equals(OldPos, Pos);
+            user.x = X;
+            user.y = Y;
+            user.z = Z;
+            //Console.WriteLine(v);
+            if (!v)
+            {
+                Console.WriteLine("Client{0} : ({1},{2},{3}).", peer.Id, _users[peer.Id].x, _users[peer.Id].y, _users[peer.Id].z);
+            }
+
+
+
+
+            /*user.x = reader.GetFloat(); 
+            user.y = reader.GetFloat();
+            user.z = reader.GetFloat();*/
+            //Console.WriteLine("Client{0} : ({1},{2},{3}).",peer.Id,_users[peer.Id].x, _users[peer.Id].y, _users[peer.Id].z);
+
+            foreach (var userPeer in server.ConnectedPeerList)
+            {
+                if (peer.Id == userPeer.Id)
+                {
+                    continue;
+                }
+                else
+                {
+                    //NetDataWriter writer = new NetDataWriter();
+                    // ПРОВЕРКА
+                    server_writer.Put(2);
+                    server_writer.Put(peer.Id);
+                    server_writer.Put(_users[peer.Id].x);
+                    server_writer.Put(_users[peer.Id].y);
+                    server_writer.Put(_users[peer.Id].z);
+
+                    userPeer.Send(server_writer, DeliveryMethod.Unreliable);
+                    server_writer.Reset();
+                }
+            }
+        }
+
+    }
+    /*private NetDataWriter GetSerializedPosition()
+    {
+        NetDataWriter writer = new NetDataWriter();
+        writer.Put(1);
+        writer.Put(_userTransform.position.x);
+        writer.Put(_userTransform.position.y);
+        writer.Put(_userTransform.position.z);
+        return writer;
+    }*/
+}
+public class UserInfo
+{
+    public float x, y, z;
+}
