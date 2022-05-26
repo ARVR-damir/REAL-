@@ -1,0 +1,116 @@
+using System.Collections;
+using System.Collections.Generic;
+using LiteNetLib;
+using System.Net;
+using System.Net.Sockets;
+using LiteNetLib.Utils;
+/*using UnityEngine;*/
+
+
+
+public class Server
+{
+    private static Dictionary<NetPeer, UserInfo> _users = new Dictionary<NetPeer, UserInfo>();
+    EventBasedNetListener netListener;
+    NetManager netManager;
+    NetPacketProcessor netProcessor;
+
+    // Start is called before the first frame update
+    private static string GetLocalIPAddress() // получаем Ip server
+    {
+        var host = Dns.GetHostEntry(System.Net.Dns.GetHostName());
+        foreach (var ip in host.AddressList)
+        {
+            if (ip.AddressFamily == AddressFamily.InterNetwork)
+            {
+                Console.WriteLine(ip.GetType());
+                return ip.ToString();//int.Parse(ip.ToString());
+            }
+        }
+        throw new Exception("No network adapters with an IPv4 address in the system!");
+    }
+    public static void Main()
+    {
+        EventBasedNetListener netListener = new EventBasedNetListener();
+        NetManager netManager = new NetManager(netListener);
+        NetPacketProcessor netProcessor = new NetPacketProcessor();
+/*
+        netManager.Start(9060);*/
+        string _serverIp = GetLocalIPAddress();
+        Console.WriteLine("Server's Ip: {0}", _serverIp);
+        netManager.Start(9060);
+
+        netListener.ConnectionRequestEvent += (request) =>
+        {
+            if (netManager.ConnectedPeersCount < 6 /* max connections */) 
+            {
+                request.AcceptIfKey("SECRET_KEY");
+                foreach(var VarPeer in netManager.ConnectedPeerList) //рассылка всем о новом появишемся в нулевой координате
+                {
+                    if(!(VarPeer == netManager.ConnectedPeerList.Last()))
+                    {
+                        netProcessor.Send<InfoPacket>(VarPeer, new InfoPacket()
+                        {
+                            CodeCommand = 1,
+                            userInfo = new UserInfo() { X_ord = 0, Y_ord = 0, Z_ord = 0 },
+                            Peer = netManager.ConnectedPeerList.Last()
+                        },
+                        DeliveryMethod.ReliableOrdered);
+                    };
+                }
+            }
+            else
+                request.Reject();
+        };
+
+        netListener.NetworkReceiveEvent += (client, packet, DeliverMethod) =>
+        {
+            netProcessor.ReadAllPackets(packet);
+        };
+
+
+
+        netProcessor.SubscribeReusable<InfoPacket>((packet) =>
+        {
+            byte ReceivedCommand = packet.CodeCommand;
+                
+                if (ReceivedCommand == 4) //
+                {
+                    foreach(NetPeer varPeer in netManager.ConnectedPeerList)
+                    {
+                        netProcessor.Send<InfoPacket>(varPeer, packet, DeliveryMethod.ReliableUnordered);
+                    }
+                }
+
+            });
+        netListener.PeerDisconnectedEvent += (peer, _) =>
+        {
+            _users.Remove(peer);
+            foreach (NetPeer varPeer in _users.Keys)
+            {
+                netProcessor.Send<InfoPacket>(varPeer, new InfoPacket()
+                {
+                    CodeCommand = 255,
+                    userInfo = new UserInfo() {X_ord=0,Y_ord=0,Z_ord=0},
+                    Peer = peer
+                },
+                DeliveryMethod.ReliableOrdered);
+                
+            }
+                Console.WriteLine($"{peer} disconect; Other get information");
+        };
+
+        while (!Console.KeyAvailable)
+        {
+            netManager.PollEvents();
+            Thread.Sleep(15);
+        }
+        netManager.Stop();
+
+    }
+    // Update is called once per frame
+    void Update()
+    {
+        netManager.PollEvents();
+    }
+}
