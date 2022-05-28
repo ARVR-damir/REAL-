@@ -19,4 +19,4 @@ An AR application should allow multiple participants to be present in it and per
 ## Technology stack
 Unity, C#, Blender, Dotnet-SDK, Android-SDK, Oculus Quest
 
-Knowledge base:: ![ссылка]([https://docs.google.com/document/d/1-nlvzS-FvCzF5lr1p7ujiO-eCYWqOBoKmkG0vmcTi7w/edit#](https://docs.google.com/presentation/d/1Hu0VT6tTYSO5UVRnyqdip4IFs1UYVBEqpmk7N07Skco/edit#slide=id.p))
+Knowledge base:: ![link]([https://docs.google.com/document/d/1-nlvzS-FvCzF5lr1p7ujiO-eCYWqOBoKmkG0vmcTi7w/edit#](https://docs.google.com/presentation/d/1Hu0VT6tTYSO5UVRnyqdip4IFs1UYVBEqpmk7N07Skco/edit#slide=id.p))
