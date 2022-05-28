@@ -4,7 +4,7 @@
 
 ## Implementation of AR multiplayer
 
-##Developers
+## Developers
 Teamleader: Khakimov Damir 
 Unity backend developer: Chernyshev Dmitry
 Blender backend developer: Korolev Nikolay
