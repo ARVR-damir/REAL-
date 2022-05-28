@@ -1,7 +1,7 @@
 # MAIMathModelingSchool2022
 
 ## TeamREAL
-![Logo](blob:https://web.telegram.org/ea6d7e9e-7772-4021-88f1-be73d8d584dd)
+<img style="display: block;-webkit-user-select: none;margin: auto;background-color: hsl(0, 0%, 90%);transition: background-color 300ms;" src="blob:https://web.telegram.org/ea6d7e9e-7772-4021-88f1-be73d8d584dd">
 
 ## Implementation of AR multiplayer
 
