@@ -1,11 +1,12 @@
 # MAIMathModelingSchool2022
 
 ## TeamREAL
+<div id="header" align="center">
+  <img src="blob:https://web.telegram.org/7002f09c-f551-4af5-bd75-efbba803c052" width="100"/>
+</div>
 
 ## Implementation of AR multiplayer
-<div id="header" align="center">
-  <img src="https://media.giphy.com/media/M9gbBd9nbDrOTu1Mqx/giphy.gif" width="100"/>
-</div>
+
 ## Developers
 Teamleader: Khakimov Damir 
 Unity backend developer: Chernyshev Dmitry
